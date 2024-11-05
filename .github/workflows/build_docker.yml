@@ -1,30 +1,33 @@
 name: Build and Deploy Docker Image
 on:
   push:
-    branches:
-      - main
-  #   tags:
-  #     - "v*.*.*"
-  # workflow_dispatch:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Get Commit Hash
+      id: commit_hash
+      uses: prompt/actions-commit-hash@v3
+
     - name: Docker meta
       id: meta
       uses: docker/metadata-action@v5
       with:
         # list of Docker images to use as base name for tags
         images: |
-          opentelekomcloud-infra/typesense-dashboard
+          ${{ vars.CONTAINER_REGISTRY_ORG }}/typesense-dashboard
         # generate Docker tags based on the following events/attributes
         tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}}.{{minor}}.{{patch}}
+          type=raw,value=${{ steps.commit_hash.outputs.short }}
+          type=raw,value=latest
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
     - name: Set up Docker Buildx
@@ -32,15 +35,9 @@ jobs:
     - name: Login to Docker Hub
       uses: docker/login-action@v3
       with:
-        registry: ${{ secrets.CONTAINER_REGISTRY }}
-        username: ${{ secrets.DOCKER_IO_USERNAME }}
-        password: ${{ secrets.DOCKER_IO_ACCESS_TOKEN }}
-    # - name: Login to GHCR
-    #   uses: docker/login-action@v3
-    #   with:
-    #     registry: ghcr.io
-    #     username: ${{ github.repository_owner }}
-    #     password: ${{ secrets.GITHUB_TOKEN }}
+        registry: ${{ vars.CONTAINER_REGISTRY }}
+        username: ${{ secrets.CONTAINER_REGISTRY_USERNAME }}
+        password: ${{ secrets.CONTAINER_REGISTRY_TOKEN }}
     - name: Build and push
       uses: docker/build-push-action@v5
       with:
@@ -50,4 +47,3 @@ jobs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         annotations: ${{ steps.meta.outputs.annotations }}
-
