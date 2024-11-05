@@ -7,3 +7,5 @@
 .eslintrc.js
 babel.config.js
 /src-ssr
+quasar.conf.js
+src-electron/electron-main.js
